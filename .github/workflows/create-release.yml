@@ -1,0 +1,40 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g. v1.0.1)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to create tags and releases
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      
+      - name: Create and push tag
+        run: |
+          VERSION="${{ inputs.version }}"
+          
+          # Configure git user for the tag creation
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create and push the tag to the latest commit
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+          
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          
+          # Create the release using GitHub CLI (pre-installed on ubuntu runners)
+          # --generate-notes automatically builds a changelog based on PRs and commits
+          gh release create "$VERSION" --title "Release $VERSION" --generate-notes
