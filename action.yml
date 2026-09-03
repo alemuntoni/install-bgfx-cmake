@@ -1,0 +1,75 @@
+name: 'Build and Install bgfx'
+description: 'Set up and compile bgfx once so it can be reused across different workflows.'
+
+inputs:
+  bgfx-version:
+    description: 'The tag or branch of bgfx.cmake to clone'
+    required: false
+    default: 'v1.157.9470-570'
+  cache:
+    description: 'Whether to cache the installation'
+    required: false
+    default: 'true'
+  cache-key-prefix:
+    description: 'Prefix for the cache key'
+    required: false
+    default: 'bgfx-install'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache bgfx
+      id: cache-bgfx
+      if: inputs.cache == 'true'
+      uses: actions/cache@v6
+      with:
+        path: ${{ github.workspace }}/bgfx-install
+        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ runner.arch }}-${{ inputs.bgfx-version }}
+
+    - name: Install Dependencies (Linux)
+      if: runner.os == 'Linux' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build libgl1-mesa-dev x11proto-core-dev libx11-dev \
+            libwayland-dev wayland-protocols libxi-dev libxinerama-dev libxcursor-dev libxrandr-dev
+
+    - name: Install Dependencies (macOS)
+      if: runner.os == 'macOS' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
+      shell: bash
+      run: |
+        brew install ninja
+
+    - name: Install Dependencies (Windows)
+      if: runner.os == 'Windows' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
+      shell: bash
+      run: |
+        choco install ninja
+
+    - name: Clone bgfx
+      if: inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        git clone --recursive https://github.com/bkaradzic/bgfx.cmake.git -b ${{ inputs.bgfx-version }} bgfx-build
+
+    - name: Configure and Build bgfx
+      if: inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        WORKSPACE: ${{ github.workspace }}
+      run: |
+        cd bgfx-build
+        
+        WORKSPACE_PATH="${WORKSPACE//\\//}"
+        
+        # We build statically, as python wheels include the static library.
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBGFX_BUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$WORKSPACE_PATH/bgfx-install"
+        cmake --build build --config Release --target install
+
+    - name: Set CMAKE_PREFIX_PATH
+      shell: bash
+      env:
+        WORKSPACE: ${{ github.workspace }}
+      run: |
+        WORKSPACE_PATH="${WORKSPACE//\\//}"
+        echo "CMAKE_PREFIX_PATH=$WORKSPACE_PATH/bgfx-install" >> $GITHUB_ENV
