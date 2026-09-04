@@ -7,6 +7,12 @@ on:
         description: 'Version tag to release (e.g. v1.0.1)'
         required: true
         type: string
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g. v1.0.1)'
+        required: true
+        type: string
 
 jobs:
   release:

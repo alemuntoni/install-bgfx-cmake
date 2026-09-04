@@ -1,0 +1,46 @@
+name: Check bgfx.cmake updates
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Every Sunday at midnight
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Get latest bgfx version
+        id: bgfx
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LATEST_BGFX_VERSION=$(gh release view --repo bkaradzic/bgfx.cmake --json tagName -q .tagName)
+          echo "latest=$LATEST_BGFX_VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Get current bgfx version
+        id: current
+        run: |
+          CURRENT_BGFX_VERSION=$(grep -oP "(?<=default: ')[^']*(?=')" action.yml)
+          echo "current=$CURRENT_BGFX_VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Update action.yml
+        if: steps.bgfx.outputs.latest != steps.current.outputs.current && steps.bgfx.outputs.latest != ''
+        run: |
+          sed -i "s/default: '${{ steps.current.outputs.current }}'/default: '${{ steps.bgfx.outputs.latest }}'/" action.yml
+          
+      - name: Create Pull Request
+        if: steps.bgfx.outputs.latest != steps.current.outputs.current && steps.bgfx.outputs.latest != ''
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update bgfx.cmake to ${{ steps.bgfx.outputs.latest }}"
+          title: "Update bgfx.cmake to ${{ steps.bgfx.outputs.latest }}"
+          body: |
+            This PR automatically updates `bgfx.cmake` default version from `${{ steps.current.outputs.current }}` to `${{ steps.bgfx.outputs.latest }}`.
+            
+            When this PR is merged, the `auto-release-on-merge` workflow will automatically trigger the creation of a new release and update the tags.
+          branch: auto-update-bgfx
+          delete-branch: true
