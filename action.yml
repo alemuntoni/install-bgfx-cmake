@@ -5,7 +5,7 @@ inputs:
   bgfx-version:
     description: 'The tag or branch of bgfx.cmake to clone'
     required: false
-    default: 'v1.157.9470-570'
+    default: 'v1.159.9479-572'
   cache:
     description: 'Whether to cache the installation'
     required: false
