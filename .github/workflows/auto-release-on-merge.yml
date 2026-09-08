@@ -31,6 +31,8 @@ jobs:
           
   create-release:
     needs: calculate-version
+    permissions:
+      contents: write
     uses: ./.github/workflows/create-release.yml
     with:
       version: ${{ needs.calculate-version.outputs.new_version }}
