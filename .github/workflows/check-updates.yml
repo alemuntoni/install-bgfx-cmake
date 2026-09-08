@@ -29,10 +29,11 @@ jobs:
           CURRENT_BGFX_VERSION=$(yq '.inputs["bgfx-version"].default' action.yml)
           echo "current=$CURRENT_BGFX_VERSION" >> $GITHUB_OUTPUT
           
-      - name: Update action.yml
+      - name: Update action.yml and README.md
         if: steps.bgfx.outputs.latest != steps.current.outputs.current && steps.bgfx.outputs.latest != ''
         run: |
           sed -i "s/default: '${{ steps.current.outputs.current }}'/default: '${{ steps.bgfx.outputs.latest }}'/" action.yml
+          sed -i "s/${{ steps.current.outputs.current }}/${{ steps.bgfx.outputs.latest }}/g" README.md
           
       - name: Create Pull Request
         if: steps.bgfx.outputs.latest != steps.current.outputs.current && steps.bgfx.outputs.latest != ''

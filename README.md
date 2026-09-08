@@ -20,7 +20,7 @@ steps:
     uses: alemuntoni/install-bgfx-cmake@v1
     with:
       # Optional: specify the tag or branch of bgfx.cmake to clone
-      bgfx-version: 'v1.157.9470-570'
+      bgfx-version: 'v1.159.9479-572'
       
       # Optional: enable or disable caching
       cache: 'true'
@@ -37,9 +37,37 @@ steps:
 
 | Name | Description | Default |
 | --- | --- | --- |
-| `bgfx-version` | The tag or branch of `bgfx.cmake` to clone. | `v1.157.9470-570` |
+| `bgfx-version` | The tag or branch of `bgfx.cmake` to clone. | `v1.159.9479-572` |
 | `cache` | Whether to cache the installation (`'true'` or `'false'`). | `'true'` |
 | `cache-key-prefix` | Prefix string for the GitHub cache key. | `bgfx-install` |
+
+## Using bgfx in CMake
+
+Once installed by this action, `CMAKE_PREFIX_PATH` is automatically set in the workflow environment, allowing CMake to locate `bgfx` using `find_package`:
+
+```cmake
+find_package(bgfx CONFIG REQUIRED)
+
+target_link_libraries(your_target PRIVATE bgfx::bgfx)
+```
+
+### Full Feature Support (Shader & Asset Compilation Tools)
+
+When using `bgfx.cmake` via `find_package`, there is a known issue where CMake helper functions (such as shader compilation utilities) may fail because the underlying tool targets are not imported globally (see [issue #251](https://github.com/bkaradzic/bgfx.cmake-archived/issues/251)).
+
+To ensure full usage across your entire CMake project, it is recommended to promote these targets to `GLOBAL` immediately after calling `find_package`:
+
+```cmake
+find_package(bgfx CONFIG REQUIRED)
+
+# Workaround for https://github.com/bkaradzic/bgfx.cmake-archived/issues/251
+set_target_properties(bgfx::bin2c PROPERTIES IMPORTED_GLOBAL TRUE)
+set_target_properties(bgfx::texturec PROPERTIES IMPORTED_GLOBAL TRUE)
+set_target_properties(bgfx::texturev PROPERTIES IMPORTED_GLOBAL TRUE)
+set_target_properties(bgfx::geometryc PROPERTIES IMPORTED_GLOBAL TRUE)
+set_target_properties(bgfx::geometryv PROPERTIES IMPORTED_GLOBAL TRUE)
+set_target_properties(bgfx::shaderc PROPERTIES IMPORTED_GLOBAL TRUE)
+```
 
 ## Environment Variables
 
