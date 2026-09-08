@@ -48,10 +48,10 @@ jobs:
       - name: Update major tag
         run: |
           VERSION="${{ inputs.version }}"
-          MAJOR_VERSION=$(echo $VERSION | grep -o 'v[0-9]*')
+          MAJOR_VERSION=$(echo "$VERSION" | cut -d. -f1)
           
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          git tag -fa $MAJOR_VERSION -m "Update $MAJOR_VERSION tag"
-          git push origin $MAJOR_VERSION --force
+          git tag -fa "$MAJOR_VERSION" -m "Update $MAJOR_VERSION tag"
+          git push origin "$MAJOR_VERSION" --force

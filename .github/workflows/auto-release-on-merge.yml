@@ -22,15 +22,21 @@ jobs:
       - name: Calculate new version
         id: calc
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 || echo "v1.0.0")
-          MAJOR=$(echo $LATEST_TAG | cut -d. -f1)
-          MINOR=$(echo $LATEST_TAG | cut -d. -f2)
-          PATCH=$(echo $LATEST_TAG | cut -d. -f3)
-          NEW_TAG="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          LATEST_TAG=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname --merged HEAD | head -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v1.0.0"
+          fi
+          VERSION_NO_V="${LATEST_TAG#v}"
+          MAJOR=$(echo "$VERSION_NO_V" | cut -d. -f1)
+          MINOR=$(echo "$VERSION_NO_V" | cut -d. -f2)
+          PATCH=$(echo "$VERSION_NO_V" | cut -d. -f3)
+          NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
           echo "new_version=$NEW_TAG" >> $GITHUB_OUTPUT
           
   create-release:
     needs: calculate-version
+    permissions:
+      contents: write
     uses: ./.github/workflows/create-release.yml
     with:
       version: ${{ needs.calculate-version.outputs.new_version }}

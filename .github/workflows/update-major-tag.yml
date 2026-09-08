@@ -7,6 +7,8 @@ on:
 jobs:
   update-tag:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -15,8 +17,8 @@ jobs:
       
       - name: Update major tag
         run: |
-          MAJOR_VERSION=$(echo ${{ github.event.release.tag_name }} | grep -o 'v[0-9]*')
+          MAJOR_VERSION=$(echo "${{ github.event.release.tag_name }}" | cut -d. -f1)
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -fa $MAJOR_VERSION -m "Update $MAJOR_VERSION tag"
-          git push origin $MAJOR_VERSION --force
+          git tag -fa "$MAJOR_VERSION" -m "Update $MAJOR_VERSION tag"
+          git push origin "$MAJOR_VERSION" --force
