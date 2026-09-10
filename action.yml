@@ -18,13 +18,30 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Get OS Info
+      id: os-info
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          if [ -f /etc/os-release ]; then
+            source /etc/os-release
+            echo "os_id=${ID}-${VERSION_ID}" >> $GITHUB_OUTPUT
+          else
+            echo "os_id=linux" >> $GITHUB_OUTPUT
+          fi
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          echo "os_id=macos-$(sw_vers -productVersion | cut -d. -f1)" >> $GITHUB_OUTPUT
+        else
+          echo "os_id=windows" >> $GITHUB_OUTPUT
+        fi
+
     - name: Cache bgfx
       id: cache-bgfx
       if: inputs.cache == 'true'
       uses: actions/cache@v6
       with:
         path: ${{ github.workspace }}/bgfx-install
-        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ runner.arch }}-${{ inputs.bgfx-version }}
+        key: ${{ inputs.cache-key-prefix }}-${{ steps.os-info.outputs.os_id }}-${{ runner.arch }}-${{ inputs.bgfx-version }}
 
     - name: Install Dependencies (Linux)
       if: runner.os == 'Linux' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
