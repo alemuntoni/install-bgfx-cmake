@@ -14,6 +14,10 @@ inputs:
     description: 'Prefix for the cache key'
     required: false
     default: 'bgfx-install'
+  build-type:
+    description: 'The CMAKE_BUILD_TYPE (e.g. Release, Debug)'
+    required: false
+    default: 'Release'
 
 runs:
   using: 'composite'
@@ -41,7 +45,7 @@ runs:
       uses: actions/cache@v6
       with:
         path: ${{ github.workspace }}/bgfx-install
-        key: ${{ inputs.cache-key-prefix }}-${{ steps.os-info.outputs.os_id }}-${{ runner.arch }}-${{ inputs.bgfx-version }}
+        key: ${{ inputs.cache-key-prefix }}-${{ steps.os-info.outputs.os_id }}-${{ runner.arch }}-${{ inputs.bgfx-version }}-${{ inputs.build-type }}
 
     - name: Install Dependencies (Linux)
       if: runner.os == 'Linux' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
@@ -80,8 +84,8 @@ runs:
         WORKSPACE_PATH="${WORKSPACE//\\//}"
         
         # We build statically, as python wheels include the static library.
-        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBGFX_BUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$WORKSPACE_PATH/bgfx-install"
-        cmake --build build --config Release --target install
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ inputs.build-type }} -DBGFX_BUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$WORKSPACE_PATH/bgfx-install"
+        cmake --build build --config ${{ inputs.build-type }} --target install
 
     - name: Set CMAKE_PREFIX_PATH
       shell: bash

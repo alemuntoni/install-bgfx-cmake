@@ -27,6 +27,9 @@ steps:
       
       # Optional: set a custom prefix for the cache key
       cache-key-prefix: 'bgfx-install'
+      
+      # Optional: set the CMAKE_BUILD_TYPE
+      build-type: 'Release'
 
   - name: Configure Your Project
     run: cmake -S . -B build
@@ -40,6 +43,7 @@ steps:
 | `bgfx-version` | The tag or branch of `bgfx.cmake` to clone. | `v1.162.9524-580` |
 | `cache` | Whether to cache the installation (`'true'` or `'false'`). | `'true'` |
 | `cache-key-prefix` | Prefix string for the GitHub cache key. | `bgfx-install` |
+| `build-type` | The CMAKE_BUILD_TYPE (e.g. `Release`, `Debug`). | `Release` |
 
 ## Using bgfx in CMake
 
