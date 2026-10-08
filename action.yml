@@ -93,4 +93,13 @@ runs:
         WORKSPACE: ${{ github.workspace }}
       run: |
         WORKSPACE_PATH="${WORKSPACE//\\//}"
-        echo "CMAKE_PREFIX_PATH=$WORKSPACE_PATH/bgfx-install" >> $GITHUB_ENV
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          SEP=";"
+        else
+          SEP=":"
+        fi
+        if [ -n "${CMAKE_PREFIX_PATH}" ]; then
+          echo "CMAKE_PREFIX_PATH=${WORKSPACE_PATH}/bgfx-install${SEP}${CMAKE_PREFIX_PATH}" >> $GITHUB_ENV
+        else
+          echo "CMAKE_PREFIX_PATH=${WORKSPACE_PATH}/bgfx-install" >> $GITHUB_ENV
+        fi
