@@ -20,7 +20,7 @@ steps:
     uses: alemuntoni/install-bgfx-cmake@v1
     with:
       # Optional: specify the tag or branch of bgfx.cmake to clone
-      bgfx-version: 'v1.161.9510-579'
+      bgfx-version: 'v1.162.9524-580'
       
       # Optional: enable or disable caching
       cache: 'true'
@@ -37,7 +37,7 @@ steps:
 
 | Name | Description | Default |
 | --- | --- | --- |
-| `bgfx-version` | The tag or branch of `bgfx.cmake` to clone. | `v1.161.9510-579` |
+| `bgfx-version` | The tag or branch of `bgfx.cmake` to clone. | `v1.162.9524-580` |
 | `cache` | Whether to cache the installation (`'true'` or `'false'`). | `'true'` |
 | `cache-key-prefix` | Prefix string for the GitHub cache key. | `bgfx-install` |
 
