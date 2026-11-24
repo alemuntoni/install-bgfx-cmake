@@ -18,6 +18,10 @@ inputs:
     description: 'The CMAKE_BUILD_TYPE (e.g. Release, Debug)'
     required: false
     default: 'Release'
+  force-build:
+    description: 'Force building bgfx from source instead of downloading prebuilt release if available'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -45,10 +49,29 @@ runs:
       uses: actions/cache@v6
       with:
         path: ${{ github.workspace }}/bgfx-install
-        key: ${{ inputs.cache-key-prefix }}-${{ steps.os-info.outputs.os_id }}-${{ runner.arch }}-${{ inputs.bgfx-version }}-${{ inputs.build-type }}
+        key: ${{ inputs.cache-key-prefix }}-${{ steps.os-info.outputs.os_id }}-${{ runner.arch }}-${{ inputs.bgfx-version }}-${{ inputs.build-type }}-${{ inputs.force-build }}
+
+    - name: Download Precompiled Release
+      id: download-bgfx
+      if: |
+        inputs.force-build != 'true' &&
+        inputs.build-type == 'Release' &&
+        (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
+      shell: bash
+      run: |
+        if command -v python3 &>/dev/null; then
+          PYTHON_BIN="python3"
+        else
+          PYTHON_BIN="python"
+        fi
+        "$PYTHON_BIN" "${{ github.action_path }}/scripts/download_release.py" \
+          --version "${{ inputs.bgfx-version }}" \
+          --install-dir "${{ github.workspace }}/bgfx-install" \
+          --runner-os "${{ runner.os }}" \
+          --runner-arch "${{ runner.arch }}"
 
     - name: Install Dependencies (Linux)
-      if: runner.os == 'Linux' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
+      if: runner.os == 'Linux' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true') && steps.download-bgfx.outputs.installed != 'true'
       shell: bash
       run: |
         sudo apt-get update
@@ -56,25 +79,25 @@ runs:
             libwayland-dev wayland-protocols libxi-dev libxinerama-dev libxcursor-dev libxrandr-dev
 
     - name: Install Dependencies (macOS)
-      if: runner.os == 'macOS' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
+      if: runner.os == 'macOS' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true') && steps.download-bgfx.outputs.installed != 'true'
       shell: bash
       run: |
         brew install ninja
 
     - name: Install Dependencies (Windows)
-      if: runner.os == 'Windows' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
+      if: runner.os == 'Windows' && (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true') && steps.download-bgfx.outputs.installed != 'true'
       shell: bash
       run: |
         choco install ninja
 
     - name: Clone bgfx
-      if: inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true'
+      if: (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true') && steps.download-bgfx.outputs.installed != 'true'
       shell: bash
       run: |
         git clone --recursive https://github.com/bkaradzic/bgfx.cmake.git -b ${{ inputs.bgfx-version }} bgfx-build
 
     - name: Configure and Build bgfx
-      if: inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true'
+      if: (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true') && steps.download-bgfx.outputs.installed != 'true'
       shell: bash
       env:
         WORKSPACE: ${{ github.workspace }}

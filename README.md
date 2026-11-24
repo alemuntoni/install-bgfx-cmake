@@ -1,12 +1,13 @@
 # Install bgfx (CMake)
 
-A GitHub Composite Action to build and install [bgfx](https://github.com/bkaradzic/bgfx) (via [bgfx.cmake](https://github.com/bkaradzic/bgfx.cmake)) across multiple platforms (Linux, macOS, Windows). 
+A GitHub Composite Action to set up and install [bgfx](https://github.com/bkaradzic/bgfx) (via [bgfx.cmake](https://github.com/bkaradzic/bgfx.cmake)) across multiple platforms (Linux, macOS, Windows). 
 
 This action automatically handles:
-- Installing required system dependencies (e.g., `ninja`, and X11/Wayland development libraries on Linux).
-- Cloning the `bgfx.cmake` repository at the specified version.
+- Checking if an official precompiled release is available for the runner platform (Windows x64, macOS ARM64, Linux x64) and downloading it to skip compilation entirely.
+- Performing a sanity verification (e.g. dynamic library and GLIBC compatibility check) on downloaded binaries with automatic fallback to source compilation if incompatible.
+- Installing required system dependencies (e.g., `ninja`, and X11/Wayland development libraries on Linux) when compiling from source.
 - Building the library statically and installing it in a local directory.
-- Caching the build artifacts to speed up subsequent workflow runs.
+- Caching the build/download artifacts to speed up subsequent workflow runs.
 - Setting the `CMAKE_PREFIX_PATH` environment variable so that subsequent CMake configuration steps in your workflow can seamlessly find the `bgfx` installation.
 
 ## Usage
@@ -30,6 +31,9 @@ steps:
       
       # Optional: set the CMAKE_BUILD_TYPE
       build-type: 'Release'
+      
+      # Optional: force compiling from source instead of downloading prebuilt release
+      force-build: 'false'
 
   - name: Configure Your Project
     run: cmake -S . -B build
@@ -40,10 +44,11 @@ steps:
 
 | Name | Description | Default |
 | --- | --- | --- |
-| `bgfx-version` | The tag or branch of `bgfx.cmake` to clone. | `v1.171.9651-619` |
+| `bgfx-version` | The tag or branch of `bgfx.cmake` to clone or download. | `v1.171.9651-619` |
 | `cache` | Whether to cache the installation (`'true'` or `'false'`). | `'true'` |
 | `cache-key-prefix` | Prefix string for the GitHub cache key. | `bgfx-install` |
 | `build-type` | The CMAKE_BUILD_TYPE (e.g. `Release`, `Debug`). | `Release` |
+| `force-build` | Force building from source instead of downloading prebuilt release (`'true'` or `'false'`). | `'false'` |
 
 ## Using bgfx in CMake
 
