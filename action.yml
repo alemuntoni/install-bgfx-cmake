@@ -107,13 +107,15 @@ runs:
       shell: bash
       env:
         WORKSPACE: ${{ github.workspace }}
+        BUILD_TYPE: ${{ inputs.build-type }}
+        CMAKE_ARGS: ${{ inputs.cmake-args }}
       run: |
         cd bgfx-build
         
         WORKSPACE_PATH="${WORKSPACE//\\//}"
 
-        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ inputs.build-type }} -DBGFX_BUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$WORKSPACE_PATH/bgfx-install" ${{ inputs.cmake-args }}
-        cmake --build build --config ${{ inputs.build-type }} --target install
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DBGFX_BUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$WORKSPACE_PATH/bgfx-install" $CMAKE_ARGS
+        cmake --build build --config "${BUILD_TYPE}" --target install
 
     - name: Set CMAKE_PREFIX_PATH
       shell: bash

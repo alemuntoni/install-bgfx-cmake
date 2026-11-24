@@ -48,7 +48,7 @@ jobs:
             platform_id: linux-x64
             cmake_args: ''
           - name: linux-arm64
-            os: ubuntu-24.04-arm64
+            os: ubuntu-24.04-arm
             platform_id: linux-arm64
             cmake_args: ''
             continue_on_error: true
@@ -77,13 +77,10 @@ jobs:
       - name: Package installation
         shell: bash
         env:
-          WORKSPACE: ${{ github.workspace }}
           BGFX_VERSION: ${{ needs.setup.outputs.bgfx_version }}
         run: |
-          WORKSPACE_PATH="${WORKSPACE//\\//}"
           ARCHIVE_NAME="bgfx-install-${{ matrix.platform_id }}-${BGFX_VERSION}.tar.gz"
-          cd "$WORKSPACE_PATH/bgfx-install"
-          tar -czf "$WORKSPACE_PATH/$ARCHIVE_NAME" .
+          tar -czf "$ARCHIVE_NAME" -C bgfx-install .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
