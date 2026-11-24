@@ -34,13 +34,14 @@ def set_output(key: str, value: str) -> None:
     print(f"[output] {key}={value}")
 
 
-def get_target_custom_asset_names(version: str, runner_os: str, runner_arch: str) -> List[str]:
+def get_target_custom_asset_names(version: str, runner_os: str, runner_arch: str, build_type: str = "Release") -> List[str]:
     """
     Generate candidate asset filenames for alemuntoni/install-bgfx-cmake releases.
     """
     os_name = runner_os.strip().lower()
     arch_name = runner_arch.strip().lower()
     norm_arch = "arm64" if arch_name in ("arm64", "aarch64") else ("x64" if arch_name in ("x64", "x86_64", "amd64") else arch_name)
+    is_debug = build_type.strip().lower() == "debug"
 
     names: List[str] = []
     if os_name == "linux":
@@ -53,7 +54,10 @@ def get_target_custom_asset_names(version: str, runner_os: str, runner_arch: str
             names.append(f"bgfx-install-macos-{norm_arch}-{version}.tar.gz")
     elif os_name == "windows":
         if norm_arch == "x64":
-            names.append(f"bgfx-install-windows-x64-{version}.tar.gz")
+            if is_debug:
+                names.append(f"bgfx-install-windows-x64-Debug-{version}.tar.gz")
+            else:
+                names.append(f"bgfx-install-windows-x64-{version}.tar.gz")
 
     return names
 
@@ -90,11 +94,14 @@ def find_asset_in_custom_repo(repo: str, target_names: List[str], token: Optiona
     return None
 
 
-def get_upstream_download_url(version: str, runner_os: str, runner_arch: str) -> Optional[str]:
+def get_upstream_download_url(version: str, runner_os: str, runner_arch: str, build_type: str = "Release") -> Optional[str]:
     """
     Generate download URL for official upstream bkaradzic/bgfx.cmake releases.
-    Upstream officially only publishes Linux x86_64, macOS arm64, Windows x86_64.
+    Upstream officially only publishes Linux x86_64, macOS arm64, Windows x86_64 in Release mode.
     """
+    if build_type.strip().lower() != "release":
+        return None
+
     os_name = runner_os.strip().lower()
     arch_name = runner_arch.strip().lower()
     norm_arch = "arm64" if arch_name in ("arm64", "aarch64") else ("x64" if arch_name in ("x64", "x86_64", "amd64") else arch_name)
@@ -258,6 +265,7 @@ def is_msvc_compiler() -> bool:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download and verify precompiled bgfx.cmake release")
     parser.add_argument("--version", required=True, help="bgfx.cmake version/tag")
+    parser.add_argument("--build-type", default="Release", help="CMAKE_BUILD_TYPE (Release, Debug)")
     parser.add_argument("--install-dir", required=True, help="Installation directory path")
     parser.add_argument("--runner-os", required=True, help="RUNNER_OS (Linux, macOS, Windows)")
     parser.add_argument("--runner-arch", required=True, help="RUNNER_ARCH (X64, ARM64, etc.)")
@@ -279,7 +287,9 @@ def main() -> None:
         archive_path = Path(tmpdir) / "bgfx-release.tar.gz"
 
         # Tier 1: Search in custom repo (alemuntoni/install-bgfx-cmake) across all releases
-        custom_target_names = get_target_custom_asset_names(args.version, args.runner_os, args.runner_arch)
+        custom_target_names = get_target_custom_asset_names(
+            args.version, args.runner_os, args.runner_arch, build_type=args.build_type
+        )
         if custom_target_names:
             asset_info = find_asset_in_custom_repo(CUSTOM_REPO, custom_target_names, token=token)
             if asset_info:
@@ -298,7 +308,9 @@ def main() -> None:
 
         # Tier 2: Fallback to upstream bkaradzic/bgfx.cmake
         if not download_succeeded:
-            upstream_url = get_upstream_download_url(args.version, args.runner_os, args.runner_arch)
+            upstream_url = get_upstream_download_url(
+                args.version, args.runner_os, args.runner_arch, build_type=args.build_type
+            )
             if upstream_url:
                 print(f"Checking precompiled release from upstream {UPSTREAM_REPO}: {upstream_url}")
                 if download_file(upstream_url, archive_path):

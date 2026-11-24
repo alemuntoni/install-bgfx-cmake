@@ -46,19 +46,28 @@ jobs:
           - name: linux-x64
             os: ubuntu-22.04
             platform_id: linux-x64
+            build_type: 'Release'
             cmake_args: ''
           - name: linux-arm64
             os: ubuntu-24.04-arm
             platform_id: linux-arm64
+            build_type: 'Release'
             cmake_args: ''
             continue_on_error: true
           - name: macos-universal
             os: macos-latest
             platform_id: macos-universal
+            build_type: 'Release'
             cmake_args: '-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64'
           - name: windows-x64
             os: windows-latest
             platform_id: windows-x64
+            build_type: 'Release'
+            cmake_args: ''
+          - name: windows-x64-debug
+            os: windows-latest
+            platform_id: windows-x64-Debug
+            build_type: 'Debug'
             cmake_args: ''
 
     steps:
@@ -75,7 +84,7 @@ jobs:
         uses: ./
         with:
           bgfx-version: ${{ needs.setup.outputs.bgfx_version }}
-          build-type: 'Release'
+          build-type: ${{ matrix.build_type }}
           force-build: 'true'
           cache: 'false'
           cmake-args: ${{ matrix.cmake_args }}
