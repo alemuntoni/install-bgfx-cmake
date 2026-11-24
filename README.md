@@ -3,9 +3,9 @@
 A GitHub Composite Action to set up and install [bgfx](https://github.com/bkaradzic/bgfx) (via [bgfx.cmake](https://github.com/bkaradzic/bgfx.cmake)) across multiple platforms (Linux, macOS, Windows). 
 
 This action automatically handles:
-- Checking and downloading precompiled releases built specifically by this action (supporting Linux x64 with broad glibc 2.35+ compatibility, Linux ARM64, macOS Universal binaries for Intel and Apple Silicon, and Windows x64) to skip compilation entirely.
+- Checking and downloading precompiled releases built specifically by this action (supporting Linux x64 with broad glibc 2.35+ compatibility, Linux ARM64, macOS Universal binaries for Intel and Apple Silicon, and Windows x64 with MSVC) to skip compilation entirely.
 - Falling back to upstream official `bgfx.cmake` releases if custom precompiled packages are not found for a requested version.
-- Performing a sanity verification (e.g. dynamic library and GLIBC compatibility check) on downloaded binaries with automatic fallback to source compilation if incompatible.
+- Performing sanity verification (GLIBC compatibility check on Linux, MSVC compiler detection on Windows) on downloaded binaries with automatic fallback to source compilation if incompatible.
 - Installing required system dependencies (e.g., `ninja`, and X11/Wayland development libraries on Linux) when compiling from source.
 - Building the library statically and installing it in a local directory.
 - Caching the build/download artifacts to speed up subsequent workflow runs.

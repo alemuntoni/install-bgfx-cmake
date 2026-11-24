@@ -211,6 +211,50 @@ def verify_binary(install_dir: Path, runner_os: str) -> bool:
         return False
 
 
+def is_msvc_compiler() -> bool:
+    """
+    Check if CMake's default C++ compiler on Windows is MSVC.
+    Runs a lightweight CMake configuration probe.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cmakelists = Path(tmpdir) / "CMakeLists.txt"
+        cmakelists.write_text(
+            "cmake_minimum_required(VERSION 3.20)\n"
+            "project(compiler_probe LANGUAGES CXX)\n"
+            "file(WRITE \"${CMAKE_BINARY_DIR}/compiler_id.txt\" \"${CMAKE_CXX_COMPILER_ID}\")\n"
+        )
+        build_dir = Path(tmpdir) / "build"
+        try:
+            cmd = ["cmake", "-S", str(tmpdir), "-B", str(build_dir)]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+            compiler_id_file = build_dir / "compiler_id.txt"
+            if compiler_id_file.is_file():
+                compiler_id = compiler_id_file.read_text().strip()
+                print(f"Detected default CMake CXX compiler on Windows: {compiler_id}")
+                return compiler_id == "MSVC"
+
+            if "The CXX compiler identification is MSVC" in res.stdout:
+                print("Detected MSVC from CMake output.")
+                return True
+            if "The CXX compiler identification is" in res.stdout:
+                for line in res.stdout.splitlines():
+                    if "The CXX compiler identification is" in line:
+                        print(f"Detected non-MSVC compiler: {line.strip()}")
+                return False
+        except Exception as e:
+            print(f"Warning: CMake compiler probe failed ({e}). Checking environment...")
+
+        # Fallback check if cl.exe is in PATH or Visual Studio environment is active
+        if shutil.which("cl") is not None:
+            print("Found cl.exe in PATH, assuming MSVC.")
+            return True
+        if "VCINSTALLDIR" in os.environ or "VSINSTALLDIR" in os.environ:
+            print("Visual Studio environment variables detected, assuming MSVC.")
+            return True
+
+        return False
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download and verify precompiled bgfx.cmake release")
     parser.add_argument("--version", required=True, help="bgfx.cmake version/tag")
@@ -221,6 +265,14 @@ def main() -> None:
 
     install_dir = Path(args.install_dir).resolve()
     token = os.environ.get("GITHUB_TOKEN") or None
+
+    # On Windows, precompiled binaries are compiled with MSVC.
+    # Check if the host CMake compiler is MSVC; if not (e.g. MinGW/Clang), skip download and build from source.
+    if args.runner_os.strip().lower() == "windows":
+        if not is_msvc_compiler():
+            print("Default CMake compiler on Windows is not MSVC. Skipping precompiled download to build from source.")
+            set_output("installed", "false")
+            return
 
     download_succeeded = False
     with tempfile.TemporaryDirectory() as tmpdir:
