@@ -14,44 +14,121 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
-  release:
+  setup:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # Needed to create tags and releases
+    outputs:
+      bgfx_version: ${{ steps.get-version.outputs.bgfx_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-      
+
+      - name: Get default bgfx version
+        id: get-version
+        shell: bash
+        run: |
+          BGFX_VERSION=$(python3 -c "import yaml; print(yaml.safe_load(open('action.yml'))['inputs']['bgfx-version']['default'])")
+          echo "bgfx_version=$BGFX_VERSION" >> $GITHUB_OUTPUT
+          echo "Building bgfx version: $BGFX_VERSION"
+
+  build-binaries:
+    name: Build (${{ matrix.name }})
+    needs: setup
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.continue_on_error || false }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-22.04
+            platform_id: linux-x64
+            cmake_args: ''
+          - name: linux-arm64
+            os: ubuntu-24.04-arm64
+            platform_id: linux-arm64
+            cmake_args: ''
+            continue_on_error: true
+          - name: macos-universal
+            os: macos-latest
+            platform_id: macos-universal
+            cmake_args: '-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64'
+          - name: windows-x64
+            os: windows-latest
+            platform_id: windows-x64
+            cmake_args: ''
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build bgfx using local action
+        uses: ./
+        with:
+          bgfx-version: ${{ needs.setup.outputs.bgfx_version }}
+          build-type: 'Release'
+          force-build: 'true'
+          cache: 'false'
+          cmake-args: ${{ matrix.cmake_args }}
+
+      - name: Package installation
+        shell: bash
+        env:
+          WORKSPACE: ${{ github.workspace }}
+          BGFX_VERSION: ${{ needs.setup.outputs.bgfx_version }}
+        run: |
+          WORKSPACE_PATH="${WORKSPACE//\\//}"
+          ARCHIVE_NAME="bgfx-install-${{ matrix.platform_id }}-${BGFX_VERSION}.tar.gz"
+          cd "$WORKSPACE_PATH/bgfx-install"
+          tar -czf "$WORKSPACE_PATH/$ARCHIVE_NAME" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.platform_id }}
+          path: ${{ github.workspace }}/bgfx-install-${{ matrix.platform_id }}-${{ needs.setup.outputs.bgfx_version }}.tar.gz
+
+  release:
+    needs: [setup, build-binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
       - name: Create and push tag
         run: |
           VERSION="${{ inputs.version }}"
           
-          # Configure git user for the tag creation
+          # Configure git user for tag creation
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Create and push the tag to the latest commit
           git tag -a "$VERSION" -m "Release $VERSION"
           git push origin "$VERSION"
-          
+
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ inputs.version }}"
           
-          # Create the release using GitHub CLI (pre-installed on ubuntu runners)
-          # --generate-notes automatically builds a changelog based on PRs and commits
-          gh release create "$VERSION" --title "Release $VERSION" --generate-notes
-          
+          # Create the release using GitHub CLI attaching all compiled artifacts
+          gh release create "$VERSION" --title "Release $VERSION" --generate-notes artifacts/*.tar.gz
+
       - name: Update major tag
         run: |
           VERSION="${{ inputs.version }}"
           MAJOR_VERSION=$(echo "$VERSION" | cut -d. -f1)
-          
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           
           git tag -fa "$MAJOR_VERSION" -m "Update $MAJOR_VERSION tag"
           git push origin "$MAJOR_VERSION" --force

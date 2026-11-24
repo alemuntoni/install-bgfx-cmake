@@ -3,7 +3,8 @@
 A GitHub Composite Action to set up and install [bgfx](https://github.com/bkaradzic/bgfx) (via [bgfx.cmake](https://github.com/bkaradzic/bgfx.cmake)) across multiple platforms (Linux, macOS, Windows). 
 
 This action automatically handles:
-- Checking if an official precompiled release is available for the runner platform (Windows x64, macOS ARM64, Linux x64) and downloading it to skip compilation entirely.
+- Checking and downloading precompiled releases built specifically by this action (supporting Linux x64 with broad glibc 2.35+ compatibility, Linux ARM64, macOS Universal binaries for Intel and Apple Silicon, and Windows x64) to skip compilation entirely.
+- Falling back to upstream official `bgfx.cmake` releases if custom precompiled packages are not found for a requested version.
 - Performing a sanity verification (e.g. dynamic library and GLIBC compatibility check) on downloaded binaries with automatic fallback to source compilation if incompatible.
 - Installing required system dependencies (e.g., `ninja`, and X11/Wayland development libraries on Linux) when compiling from source.
 - Building the library statically and installing it in a local directory.
@@ -35,6 +36,9 @@ steps:
       # Optional: force compiling from source instead of downloading prebuilt release
       force-build: 'false'
 
+      # Optional: extra arguments to pass to CMake during configuration
+      cmake-args: ''
+
   - name: Configure Your Project
     run: cmake -S . -B build
     # CMAKE_PREFIX_PATH is automatically set by the action!
@@ -49,6 +53,7 @@ steps:
 | `cache-key-prefix` | Prefix string for the GitHub cache key. | `bgfx-install` |
 | `build-type` | The CMAKE_BUILD_TYPE (e.g. `Release`, `Debug`). | `Release` |
 | `force-build` | Force building from source instead of downloading prebuilt release (`'true'` or `'false'`). | `'false'` |
+| `cmake-args` | Extra arguments to pass to CMake during configuration. | `''` |
 
 ## Using bgfx in CMake
 

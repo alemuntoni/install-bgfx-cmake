@@ -22,6 +22,10 @@ inputs:
     description: 'Force building bgfx from source instead of downloading prebuilt release if available'
     required: false
     default: 'false'
+  cmake-args:
+    description: 'Extra arguments to pass to CMake during configuration'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -58,6 +62,8 @@ runs:
         inputs.build-type == 'Release' &&
         (inputs.cache != 'true' || steps.cache-bgfx.outputs.cache-hit != 'true')
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         if command -v python3 &>/dev/null; then
           PYTHON_BIN="python3"
@@ -106,7 +112,7 @@ runs:
         
         WORKSPACE_PATH="${WORKSPACE//\\//}"
 
-        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ inputs.build-type }} -DBGFX_BUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$WORKSPACE_PATH/bgfx-install"
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ inputs.build-type }} -DBGFX_BUILD_EXAMPLES=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$WORKSPACE_PATH/bgfx-install" ${{ inputs.cmake-args }}
         cmake --build build --config ${{ inputs.build-type }} --target install
 
     - name: Set CMAKE_PREFIX_PATH
